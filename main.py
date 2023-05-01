@@ -6,9 +6,10 @@ reddit = praw.Reddit("IRProject")
 reddit.read_only = True
 
 with open('seed.json') as json_file:
-    data =json.load(json_file)
+    crawl_list=json.load(json_file)
 
+for crawl in crawl_list:
+    for submission in reddit.subreddit(crawl).hot(limit=10):
+        print (submission.title)
 
-for submission in reddit.subreddit("test").hot(limit=10):
-    print(submission.title)
 
