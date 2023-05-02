@@ -7,10 +7,10 @@ from bs4 import BeautifulSoup
 reddit = praw.Reddit("IRProject")
 reddit.read_only = True
 
-def extract_hyperlink_title(url):
+def extract_link_title(url):
     try:
-        response = requests.get(url)
-        soup = BeautifulSoup(response.content,'html.parser')
+        response = requests.get(url)            # send a HTTP GET request to the URL
+        soup = BeautifulSoup(response.content,'html.parser')    # parse HTML documents & extract the title of the webpage
         title = soup.title.string
     except:
         title = "No title found"
@@ -18,16 +18,16 @@ def extract_hyperlink_title(url):
 
 def extract_hyperlink_titles(post):
     post_text = post.selftext
-    words = post_text.split()
+    words = post_text.split()   #splits selftext into a list of words
     hyperlink_titles = []
     for word in words:
         if word.startswith("http") or word.startswith("https"):
-            parsed_url = urlparse(word)
-            query = parse_qs(parsed_url.query)
+            parsed_url = urlparse(word)         # Parse the URL to extract the query parameters
+            query = parse_qs(parsed_url.query)  # qs: extract the values of the query 
             if "title" in query:
-                hyperlink_titles.append(query["title"][0])
+                hyperlink_titles.append(query["title"][0])     # If exists, append the value of the "title" to hyperlink_titles 
             else:
-                hyperlink_titles.append(extract_hyperlink_title(word))
+                hyperlink_titles.append(extract_link_title(word))
     return hyperlink_titles
 
 sub = reddit.subreddit("HobbyDrama")
