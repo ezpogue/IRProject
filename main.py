@@ -11,14 +11,24 @@ posts = sub.top(time_filter="month",limit=100)
 dict= {"Title": [], "Body": [], "ID": [], "Score": [], "URL": [], "Permalink": [], "Number of comments": [], "Comments": [], "Hyperlinks": []}
 
 
-def extract_hyperlinks(post):
+def extract_hyperlinks_titles(post):
     post_text = post.selftext
     words = post_text.split()
     links = []
     for word in words:
         if word.startswith("http") or word.startswith("https"):
-            links.append(word)
-    return links
+            end_idx = len(word)
+            if word.endswith("."):
+                end_idx -= 1
+            if word.endswith(")") or word.endswith(";") or word.endswith(":"):
+                end_idx -= 1
+            if word.endswith(")") and "(" in word:
+                end_idx -= 1
+                start_idx = word.index("(") + 1
+            else:
+                start_idx = word.index("http")
+            hyperlink_titles.append(word[start_idx:end_idx])
+    return hyperlink_titles
 
 for post in posts:
         dict["Title"].append(post.title)
