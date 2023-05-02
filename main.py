@@ -36,20 +36,7 @@ def scrape_posts(posts, file_name, seen_ids):
 
 seen_ids = set()
 
-#print execution time for threads for testing
 with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-    ##start_new = time.perf_counter()
     future_new = executor.submit(scrape_posts, sub.new(limit=100), "new_posts.json", seen_ids)
-    ##end_new = time.perf_counter()
-
-    ##start_hot = time.perf_counter()
     future_hot = executor.submit(scrape_posts, sub.hot(limit=100), "hot_posts.json", seen_ids)
-    ##end_hot = time.perf_counter()
-
-    ##start_top = time.perf_counter()
     future_top = executor.submit(scrape_posts, sub.top(time_filter="month",limit=100), "top_posts.json", seen_ids)
-    ##end_top = time.perf_counter()
-
-    """print(f"New posts execution time: {end_new - start_new:0.4f} seconds")
-    print(f"Hot posts execution time: {end_hot - start_hot:0.4f} seconds")
-    print(f"Top posts execution time: {end_top - start_top:0.4f} seconds")"""
