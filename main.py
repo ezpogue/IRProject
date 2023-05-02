@@ -5,7 +5,6 @@ import requests
 from bs4 import BeautifulSoup
 
 url_pattern = re.compile(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')
-
 def find_url(self_text):
     global url_pattern
     urls = []
@@ -48,16 +47,9 @@ def convert_data(post,submission):
     submission.comments.replace_more(limit=None)
     post["comments"] = convert_comment(submission.comments.list())
     
-    
-    
-    ##Todo
-    ##Search for URLs in this post, and assign them a name + link for the json   
-    ##Access HTML Header, Grab the title of the website.
-        
-    ##ToDo
-    ##Search through comments and seperate title of links and url for each
-    
-        ##Downlaod or just have the link to a seperate subreddit with link
+    ##Download or just have the link to a seperate subreddit with link
+    ##Crawl the comments to other reddit
+    ##think about duplication or if cyclical.
 
 reddit = praw.Reddit("IRProject")
 reddit.read_only = True
@@ -77,24 +69,8 @@ author = {}
 ##Split crawlers to subreddits
 for crawl in crawl_list:
     post[crawl] = dict()
-    ##ToDo
-    
-    ##Split this into crawlers for New, Hot, Top(day,week,month,year)
-    
-    ##Check for new comments or updates, include this for comments
-    
     for submission in reddit.subreddit(crawl).hot(limit = 1):
         convert_data(post[crawl],submission)
-        
-        ##Todo
-        ##Search for URLs in this post, and assign them a name + link for the json   
-        ##Access HTML Header, Grab the title of the website.
-         
-        ##ToDo
-        ##Search through comments and seperate title of links and url for each
-        
-        ##Downlaod or just have the link to a seperate subreddit with link
-        
 
 print(post)
 
