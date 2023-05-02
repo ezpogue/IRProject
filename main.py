@@ -8,7 +8,17 @@ reddit.read_only = True
 sub = reddit.subreddit("HobbyDrama")
 posts = sub.top(time_filter="month",limit=100)
 
-dict= {"Title": [], "Body": [], "ID": [], "Score": [], "URL": [], "Permalink": [], "Number of comments": [], "Comments": []}
+dict= {"Title": [], "Body": [], "ID": [], "Score": [], "URL": [], "Permalink": [], "Number of comments": [], "Comments": [], "Hyperlinks": []}
+
+
+def extract_hyperlinks(post):
+    post_text = post.selftext
+    words = post_text.split()
+    links = []
+    for word in words:
+        if word.startswith("http") or word.startswith("https"):
+            links.append(word)
+    return links
 
 for post in posts:
         dict["Title"].append(post.title)
@@ -25,6 +35,7 @@ for post in posts:
         for comment in submission.comments:
                 c.append(comment.body)
         dict["Comments"].append(c)
+        dict["Hyperlinks"].append(extract_hyperlinks(post))
 
 df = pd.DataFrame(dict)
 print(df)
