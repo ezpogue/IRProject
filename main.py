@@ -36,7 +36,11 @@ def scrape_posts(posts, file_name, seen_ids):
 
 seen_ids = set()
 
-with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+with concurrent.futures.ThreadPoolExecutor(max_workers=7) as executor:
     future_new = executor.submit(scrape_posts, sub.new(limit=100), "new_posts.json", seen_ids)
     future_hot = executor.submit(scrape_posts, sub.hot(limit=100), "hot_posts.json", seen_ids)
-    future_top = executor.submit(scrape_posts, sub.top(time_filter="month",limit=100), "top_posts.json", seen_ids)
+    future_top_day = executor.submit(scrape_posts, sub.top(time_filter="day",limit=100), "top_posts_day.json", seen_ids)
+    future_top_week = executor.submit(scrape_posts, sub.top(time_filter="week",limit=100), "top_posts_week.json", seen_ids)
+    future_top_month = executor.submit(scrape_posts, sub.top(time_filter="month",limit=100), "top_posts_month.json", seen_ids)
+    future_top_year = executor.submit(scrape_posts, sub.top(time_filter="year",limit=100), "top_posts_year.json", seen_ids)
+    future_top_all = executor.submit(scrape_posts, sub.top(time_filter="all",limit=100), "top_posts_all.json", seen_ids)
