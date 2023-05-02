@@ -9,8 +9,13 @@ sub = reddit.subreddit("HobbyDrama")
 posts = sub.top(time_filter="month",limit=100)
 
 dict= {"Title": [], "Body": [], "ID": [], "Score": [], "URL": [], "Permalink": [], "Number of comments": [], "Comments": []}
+seen_ids = set()
 
 for post in posts:
+        if post.id in seen_ids:
+                continue
+        seen_ids.add(post.id)
+        
         dict["Title"].append(post.title)
         dict["Body"].append(post.selftext)
         dict["ID"].append(post.id)
