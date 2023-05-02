@@ -1,5 +1,4 @@
 import praw
-import pandas
 import json
 import re
 import requests
@@ -20,15 +19,15 @@ def find_url(self_text):
 def convert_comment(comment):
     com_dict = {}
     for c in comment:
-        com_dict['id'] = c.id
-        com_dict['author'] = c.author
-        com_dict['parent_id'] = c.parent_id
-        com_dict['score'] = c.score
-        com_dict['created_utc'] = c.created_utc
-        com_dict['permalink'] = c.permalink
-        com_dict['subreddit'] = c.subreddit
-        com_dict['self_text'] = c.body
-        com_dict['self_text_url'] = find_url(c.body)
+        com = {}
+        com['c_author'] = c.author.name
+        com['c_parent_id'] = c.parent_id
+        com['c_score'] = c.score
+        com['c_created_utc'] = c.created_utc
+        com['c_permalink'] = c.permalink
+        com['c_self_text'] = c.body
+        com['c_self_text_url'] = find_url(c.body)
+        com_dict[c.id] = com
     return com_dict
 def convert_data(post,submission):
     post["id"] = submission.id
@@ -46,8 +45,8 @@ def convert_data(post,submission):
     post["num_comments"] = submission.num_comments
     submission.comment_sort = "best"
     ## No limit to nested, setting to 0 gives you only first layer
-    ## submission.comments.replace_more(limit=0)
-    post["comments"] = convert_comment(submission.comment)
+    submission.comments.replace_more(limit=None)
+    post["comments"] = convert_comment(submission.comments.list())
     
     
     
@@ -84,13 +83,8 @@ for crawl in crawl_list:
     
     ##Check for new comments or updates, include this for comments
     
-    for submission in reddit.subreddit(crawl).hot(limit = 5):
-        post[crawl]["title"] = submission.title
-        ##ToDo
-        ##Tracking Frequency of this Author, incase they are a major contributor. Consider threshhold for this 
-        post[crawl]["author"] = submission.author.name
-        post[crawl]["self_url"] = submission.url        
-        post[crawl]["self_text"] = submission.selftext
+    for submission in reddit.subreddit(crawl).hot(limit = 1):
+        convert_data(post[crawl],submission)
         
         ##Todo
         ##Search for URLs in this post, and assign them a name + link for the json   
@@ -101,7 +95,8 @@ for crawl in crawl_list:
         
         ##Downlaod or just have the link to a seperate subreddit with link
         
-    print(post)
+
+print(post)
 
 ##ToDo
 ##Dump post into a json file
