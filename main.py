@@ -1,34 +1,39 @@
 import praw
 import pandas as pd
-import praw.models
+from urllib.parse import urlparse, parse_qs
+import requests
+from bs4 import BeautifulSoup
 
 reddit = praw.Reddit("IRProject")
 reddit.read_only = True
 
+def extract_hyperlink_title(url):
+    try:
+        response = requests.get(url)
+        soup = BeautifulSoup(response.content,'html.parser')
+        title = soup.title.string
+    except:
+        title = "No title found"
+    return title
+
+def extract_hyperlink_titles(post):
+    post_text = post.selftext
+    words = post_text.split()
+    hyperlink_titles = []
+    for word in words:
+        if word.startswith("http") or word.startswith("https"):
+            parsed_url = urlparse(word)
+            query = parse_qs(parsed_url.query)
+            if "title" in query:
+                hyperlink_titles.append(query["title"][0])
+            else:
+                hyperlink_titles.append(extract_hyperlink_title(word))
+    return hyperlink_titles
+
 sub = reddit.subreddit("HobbyDrama")
 posts = sub.top(time_filter="month",limit=100)
 
-dict= {"Title": [], "Body": [], "ID": [], "Score": [], "URL": [], "Permalink": [], "Number of comments": [], "Comments": [], "Hyperlinks": []}
-
-
-def extract_hyperlinks_titles(post):
-    post_text = post.selftext
-    words = post_text.split()
-    links = []
-    for word in words:
-        if word.startswith("http") or word.startswith("https"):
-            end_idx = len(word)
-            if word.endswith("."):
-                end_idx -= 1
-            if word.endswith(")") or word.endswith(";") or word.endswith(":"):
-                end_idx -= 1
-            if word.endswith(")") and "(" in word:
-                end_idx -= 1
-                start_idx = word.index("(") + 1
-            else:
-                start_idx = word.index("http")
-            hyperlink_titles.append(word[start_idx:end_idx])
-    return hyperlink_titles
+dict= {"Title": [], "Body": [], "ID": [], "Score": [], "URL": [], "Permalink": [], "Number of comments": [], "Comments": [], "Hyperlink Titles": []}
 
 for post in posts:
         dict["Title"].append(post.title)
@@ -45,7 +50,7 @@ for post in posts:
         for comment in submission.comments:
                 c.append(comment.body)
         dict["Comments"].append(c)
-        dict["Hyperlinks"].append(extract_hyperlinks(post))
+        dict["Hyperlink Titles"].append(extract_hyperlink_titles(post))
 
 df = pd.DataFrame(dict)
 print(df)
