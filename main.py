@@ -29,4 +29,4 @@ for post in posts:
 df = pd.DataFrame(dict)
 print(df)
 f = open("test.json", "w")
-f.write(df.to_json())
+f.write(df.to_json(orient='records',lines=True))
