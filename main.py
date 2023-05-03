@@ -1,6 +1,5 @@
 import praw
 import pandas as pd
-import praw.models
 import concurrent.futures
 
 reddit = praw.Reddit("IRProject")
@@ -11,7 +10,7 @@ sub = reddit.subreddit("HobbyDrama")
 def scrape_posts(posts, file_name, seen_ids):
     dict= {"Title": [], "Body": [], "ID": [], "Score": [], "URL": [], "Permalink": [], "Number of comments": [], "Comments": []}
     for post in posts:
-        if post.id in seen_ids:
+        if post.id in seen_ids or post.id in dict["ID"]:
             continue
 
         seen_ids.add(post.id)
@@ -34,13 +33,54 @@ def scrape_posts(posts, file_name, seen_ids):
     df.drop_duplicates(subset="ID", keep="first", inplace=True)
     df.to_json(file_name, orient='records', lines=True)
 
-seen_ids = set()
 
-with concurrent.futures.ThreadPoolExecutor(max_workers=7) as executor:
+def scrape_author_posts(author_name, seen_ids):
+    author = reddit.redditor(author_name)
+    author_upvotes = []
+    for submission in author.submissions.new():
+        author_upvotes.append(submission.score)
+    if len(author_upvotes) > 0 and sum(author_upvotes) / len(author_upvotes) >= 100:
+        author_posts = []
+        for submission in author.submissions.new():
+            author_posts.append(submission)
+        scrape_posts(author_posts, f"{author_name}.json", seen_ids)
+        print(f"Saved data for {author_name} to {author_name}.json")
+    else:
+        print(f"Not scraping feed for {author_name}, average upvotes < 100")
+
+seen_ids = set()
+thread_count = 0
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=None) as executor:
+    thread_count += 1
     future_new = executor.submit(scrape_posts, sub.new(limit=100), "new_posts.json", seen_ids)
+    thread_count += 1
     future_hot = executor.submit(scrape_posts, sub.hot(limit=100), "hot_posts.json", seen_ids)
+    thread_count += 1
     future_top_day = executor.submit(scrape_posts, sub.top(time_filter="day",limit=100), "top_posts_day.json", seen_ids)
+    thread_count += 1
     future_top_week = executor.submit(scrape_posts, sub.top(time_filter="week",limit=100), "top_posts_week.json", seen_ids)
+    thread_count += 1
     future_top_month = executor.submit(scrape_posts, sub.top(time_filter="month",limit=100), "top_posts_month.json", seen_ids)
+    thread_count += 1
     future_top_year = executor.submit(scrape_posts, sub.top(time_filter="year",limit=100), "top_posts_year.json", seen_ids)
+    thread_count += 1
     future_top_all = executor.submit(scrape_posts, sub.top(time_filter="all",limit=100), "top_posts_all.json", seen_ids)
+    
+    # Collect a list of authors to scrape
+    authors = set()
+    for post in sub.top(time_filter="year",limit=100):
+        if post.author is not None and post.author.name not in authors:
+            authors.add(post.author.name)
+    
+    # Scrape author feeds
+    author_futures = []
+    for author_name in authors:
+        thread_count += 1
+        author_futures.append(executor.submit(scrape_author_posts, author_name, seen_ids))
+        
+    print(f"{thread_count} threads running")
+    
+    for future in concurrent.futures.as_completed(author_futures + [future_new, future_hot, future_top_day, future_top_week, future_top_month, future_top_year, future_top_all]):
+        thread_count -= 1
+        print(f"{thread_count} threads running") ##checking if multi-threading works with author posts

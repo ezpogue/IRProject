@@ -1,8 +1,1 @@
-/test.json
-/new_posts.json
-/top_posts_day.json
-/top_posts_week.json
-/top_posts_month.json
-/top_posts_year.json
-/top_posts_all.json
-/hot_posts.json
+*.json
