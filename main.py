@@ -24,25 +24,16 @@ def scrape_posts(posts, file_name, seen_ids):
         submission = reddit.submission(post.id)
         submission.comment_sort = "best"
         submission.comments.replace_more(limit=0)
-        c = []
-        for comment in submission.comments:
-            c.append(comment.body)
-        dict["Comments"].append(c)
+        dict["Comments"].append([comment.body for comment in submission.comments])
 
-    df = pd.DataFrame(dict)
-    df.drop_duplicates(subset="ID", keep="first", inplace=True)
+    df = pd.DataFrame(dict).drop_duplicates(subset="ID", keep="first")
     df.to_json(file_name, orient='records', lines=True)
-
 
 def scrape_author_posts(author_name, seen_ids):
     author = reddit.redditor(author_name)
-    author_upvotes = []
-    for submission in author.submissions.new():
-        author_upvotes.append(submission.score)
+    author_upvotes = [submission.score for submission in author.submissions.new()]
     if len(author_upvotes) > 0 and sum(author_upvotes) / len(author_upvotes) >= 100:
-        author_posts = []
-        for submission in author.submissions.new():
-            author_posts.append(submission)
+        author_posts = [submission for submission in author.submissions.new()]
         scrape_posts(author_posts, f"{author_name}.json", seen_ids)
         print(f"Saved data for {author_name} to {author_name}.json")
     else:
@@ -51,21 +42,22 @@ def scrape_author_posts(author_name, seen_ids):
 seen_ids = set()
 thread_count = 0
 
-with concurrent.futures.ThreadPoolExecutor(max_workers=None) as executor:
-    thread_count += 1
-    future_new = executor.submit(scrape_posts, sub.new(limit=100), "new_posts.json", seen_ids)
-    thread_count += 1
-    future_hot = executor.submit(scrape_posts, sub.hot(limit=100), "hot_posts.json", seen_ids)
-    thread_count += 1
-    future_top_day = executor.submit(scrape_posts, sub.top(time_filter="day",limit=100), "top_posts_day.json", seen_ids)
-    thread_count += 1
-    future_top_week = executor.submit(scrape_posts, sub.top(time_filter="week",limit=100), "top_posts_week.json", seen_ids)
-    thread_count += 1
-    future_top_month = executor.submit(scrape_posts, sub.top(time_filter="month",limit=100), "top_posts_month.json", seen_ids)
-    thread_count += 1
-    future_top_year = executor.submit(scrape_posts, sub.top(time_filter="year",limit=100), "top_posts_year.json", seen_ids)
-    thread_count += 1
-    future_top_all = executor.submit(scrape_posts, sub.top(time_filter="all",limit=100), "top_posts_all.json", seen_ids)
+with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
+    futures = []
+    thread_count +=1
+    futures.append(executor.submit(scrape_posts, sub.new(limit=100), "new_posts.json", seen_ids))
+    thread_count +=1
+    futures.append(executor.submit(scrape_posts, sub.hot(limit=100), "hot_posts.json", seen_ids))
+    thread_count +=1
+    futures.append(executor.submit(scrape_posts, sub.top(time_filter="day",limit=100), "top_posts_day.json", seen_ids))
+    thread_count +=1
+    futures.append(executor.submit(scrape_posts, sub.top(time_filter="week",limit=100), "top_posts_week.json", seen_ids))
+    thread_count +=1
+    futures.append(executor.submit(scrape_posts, sub.top(time_filter="month",limit=100), "top_posts_month.json", seen_ids))
+    thread_count +=1
+    futures.append(executor.submit(scrape_posts, sub.top(time_filter="year",limit=100), "top_posts_year.json", seen_ids))
+    thread_count +=1
+    futures.append(executor.submit(scrape_posts, sub.top(time_filter="all",limit=100), "top_posts_all.json", seen_ids))
     
     # Collect a list of authors to scrape
     authors = set()
@@ -74,13 +66,12 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=None) as executor:
             authors.add(post.author.name)
     
     # Scrape author feeds
-    author_futures = []
     for author_name in authors:
-        thread_count += 1
-        author_futures.append(executor.submit(scrape_author_posts, author_name, seen_ids))
+        thread_count +=1
+        futures.append(executor.submit(scrape_author_posts, author_name, seen_ids))
         
     print(f"{thread_count} threads running")
     
-    for future in concurrent.futures.as_completed(author_futures + [future_new, future_hot, future_top_day, future_top_week, future_top_month, future_top_year, future_top_all]):
-        thread_count -= 1
+    for future in concurrent.futures.as_completed(futures):
+        thread_count -=1
         print(f"{thread_count} threads running") ##checking if multi-threading works with author posts
