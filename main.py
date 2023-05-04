@@ -1,6 +1,7 @@
 import praw
 import pandas as pd
 from urllib.parse import urlparse, parse_qs
+import re
 import requests
 from bs4 import BeautifulSoup
 import concurrent.futures
@@ -8,6 +9,7 @@ import concurrent.futures
 reddit = praw.Reddit("IRProject")
 reddit.read_only = True
 
+url_pattern = re.compile(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')
 def extract_link_title(url):
     try:
         response = requests.get(url)
@@ -17,49 +19,67 @@ def extract_link_title(url):
         title = "No title found"
     return title
 
-def extract_hyperlink_titles(post):
-    post_text = post.selftext
-    words = post_text.split()
-    hyperlink_titles = []
-    for word in words:
-        if word.startswith("http") or word.startswith("https"):
-            parsed_url = urlparse(word)
-            query = parse_qs(parsed_url.query)
-            if "title" in query:
-                hyperlink_titles.append(query["title"][0])
-            else:
-                hyperlink_titles.append(extract_link_title(word))
-    return hyperlink_titles
-
-sub = reddit.subreddit("HobbyDrama")
+def extract_text_url(self_text):
+    global url_pattern
+    urls = []
+    url_list = []
+    urls.extend(url_pattern.findall(self_text))
+    for u in urls:
+        parsed_url = urlparse(u)
+        query = parse_qs(parsed_url.query)
+        if "title" in query:
+            new_pair = (query["title"][0],u)
+        else:
+            new_pair = (extract_link_title(u),u)
+        url_list.append(new_pair)        
+    return url_list
 
 def get_nested_comments(comment):
     comments = [comment]
     for reply in comment.replies:
         comments.extend(get_nested_comments(reply))
     return comments
+
+def get_comments(c):
+    com = {}
+    if c.author is None:
+        com['Author'] = "Deleted"
+    else:
+        com['Author'] = c.author.name
+    com['Parent ID'] = c.parent_id
+    com['Body'] = c.body
+    com['Text Url'] = extract_text_url(c.body)
+    com['Ups'] = c.ups
+    com['Downs'] = c.downs
+    com['Permalink'] = c.permalink
+    return com
+        
 def scrape_posts(posts, file_name, seen_ids):
-    dict = {"Title": [], "Body": [], "ID": [], "Score": [], "URL": [], "Permalink": [], "Number of comments": [], "Comments": [], "Hyperlink Titles": []}
+    dict = {"Title": [], "Author": [], "Body": [], "ID": [], "Score": [], "Ratio": [], "URL": [], "Permalink": [], "Number of comments": [], "Comments": [], "Text URL": []}
     for post in posts:
         if post.id in seen_ids or post.id in dict["ID"]:
             continue
-
         seen_ids.add(post.id)
         dict["Title"].append(post.title)
+        dict["Author"].append(post.author.name)
         dict["Body"].append(post.selftext)
         dict["ID"].append(post.id)
         dict["Score"].append(post.score)
+        dict["Ratio"].append(post.upvote_ratio)
         dict["URL"].append(post.url)
         dict["Permalink"].append(post.permalink)
         dict["Number of comments"].append(post.num_comments)
         submission = reddit.submission(post.id)
         submission.comment_sort = "best"
-        submission.comments.replace_more(limit=None)
-        c = []
-        for comment in submission.comments:
-            c.extend(get_nested_comments(comment))
-        dict["Comments"].append([comments.body for comments in c])
-        dict["Hyperlink Titles"].append(extract_hyperlink_titles(post))
+        submission.comments.replace_more(limit=5)
+        
+        com_dict = {}
+        for comment in submission.comments.list():
+            if comment is None:
+                continue
+            com_dict[comment.id] = get_comments(comment)
+        dict["Comments"].append(com_dict)      
+        dict["Text URL"].append(extract_text_url(post.selftext))
 
     df = pd.DataFrame(dict).drop_duplicates(subset="ID", keep="first")
     print(f"Writing data to {file_name}")
@@ -79,6 +99,11 @@ def scrape_author_posts(author_name, seen_ids):
 
 seen_ids = set()
 thread_count = 0
+sub = reddit.subreddit("HobbyDrama")
+
+##Small Test Case
+#scrape_posts(sub.top(time_filter="all",limit=1), "top_post.json", seen_ids)
+
 
 with concurrent.futures.ThreadPoolExecutor(max_workers=220) as executor:
     futures = []
