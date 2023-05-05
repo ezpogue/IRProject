@@ -31,13 +31,6 @@ def extract_hyperlink_titles(post):
                 hyperlink_titles.append(extract_link_title(word))
     return hyperlink_titles
 
-def get_nested_comments(comment, count = 0):
-    comments = [comment]
-    for reply in comment.replies:
-        if(count >=100):
-            break
-        comments.extend(get_nested_comments(reply, count + 1))
-    return comments
 def scrape_posts(posts, file_name, seen_ids):
     dict = {"Title": [], "Body": [], "ID": [], "Score": [], "URL": [], "Permalink": [], "Number of comments": [], "Comments": [], "Hyperlink Titles": []}
     for post in posts:
@@ -57,7 +50,7 @@ def scrape_posts(posts, file_name, seen_ids):
         submission.comments.replace_more(limit=None)
         c = []
         for comment in submission.comments:
-            c.extend(get_nested_comments(comment))
+            #c.extend(get_nested_comments(comment))
         dict["Comments"].append([comments.body for comments in c])
         dict["Hyperlink Titles"].append(extract_hyperlink_titles(post))
 
