@@ -25,6 +25,7 @@ comment_pattern = re.compile(r'^https?://(www\.)?reddit\.com/r/[\w-]+/comments/[
 def extract_link_title(url):
     try:
         response = requests.get(url)
+        html = response.read().decode(encoding="utf-8")
         soup = BeautifulSoup(response.content,'html.parser')
         title = soup.title.string
     except:
@@ -132,8 +133,12 @@ scrape_subreddit.append("HobbyDrama")
 
 def task_priority(future):
     #Calculate the priority of a task based on its execution time
-    return 1 / future.result()
-
+    #return 1 / future.result()
+    result = future.result()
+    if result is not None:
+        return 1 / result
+    else:
+        return 0
 
 with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
     thread_count += 1
@@ -171,7 +176,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
 
     for future in sorted(concurrent.futures.as_completed(futures), key=task_priority):
         thread_count -= 1
-        print(f"{thread_count} threads running")
+        #print(f"{thread_count} threads running")
 
 print(subreddit_frequency)
 
