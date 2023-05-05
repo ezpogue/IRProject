@@ -33,7 +33,6 @@ def extract_link_title(url):
 def extract_text_url(self_text):
     global url_pattern
     urls = []
-    reddit_url = []
     url_list = []
     urls.extend(url_pattern.findall(self_text))
     for u in urls:
@@ -64,23 +63,8 @@ def update_frequency(subreddit):
     else:
         subreddit_frequency[subreddit] = 1
     if (not subreddit in scrape_subreddit and len(scrape_subreddit) <= 15 and subreddit_frequency[subreddit] >= 50):
-        sub = reddit.subreddit(subreddit)
         scrape_subreddit.append(subreddit)
-        with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
-            thread_count += 1
-            futures.append(executor.submit(scrape_posts, sub.new(limit=50)))
-            thread_count += 1
-            futures.append(executor.submit(scrape_posts, sub.hot(limit=50)))
-            thread_count += 1
-            futures.append(executor.submit(scrape_posts, sub.top(time_filter="day", limit=50)))
-            thread_count += 1
-            futures.append(executor.submit(scrape_posts, sub.top(time_filter="week", limit=50)))
-            thread_count += 1
-            futures.append(executor.submit(scrape_posts, sub.top(time_filter="month", limit=50)))
-            thread_count += 1
-            futures.append(executor.submit(scrape_posts, sub.top(time_filter="year", limit=50)))
-            thread_count += 1
-            futures.append(executor.submit(scrape_posts, sub.top(time_filter="all", limit=50)))
+        
 def get_comments(c):
     com = {}
     if c.author is None:
@@ -116,10 +100,10 @@ def scrape(post):
     dict["Permalink"].append(post.permalink)
     dict["Number of comments"].append(post.num_comments)
     submission = reddit.submission(post.id)
-    submission.comment_sort = "best"
-
-    submission.comments.replace_more(limit=5)
     
+    
+    submission.comment_sort = "best"
+    submission.comments.replace_more(limit=5)
     com_dict = {}
     for comment in submission.comments.list():
         if comment is None:
@@ -143,7 +127,7 @@ sub = reddit.subreddit("HobbyDrama")
 scrape_subreddit.append("HobbyDrama")
 
 ##Small Test Case
-scrape_posts(sub.top(time_filter="all",limit=5))
+#scrape_posts(sub.top(time_filter="all",limit=5))
 
 
 def task_priority(future):
@@ -153,19 +137,19 @@ def task_priority(future):
 
 with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.new(limit=50)))
+    futures.append(executor.submit(scrape_posts, sub.new(limit=5)))
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.hot(limit=50)))
+    futures.append(executor.submit(scrape_posts, sub.hot(limit=5)))
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.top(time_filter="day", limit=50)))
+    futures.append(executor.submit(scrape_posts, sub.top(time_filter="day", limit=5)))
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.top(time_filter="week", limit=50)))
+    futures.append(executor.submit(scrape_posts, sub.top(time_filter="week", limit=5)))
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.top(time_filter="month", limit=50)))
+    futures.append(executor.submit(scrape_posts, sub.top(time_filter="month", limit=5)))
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.top(time_filter="year", limit=50)))
+    futures.append(executor.submit(scrape_posts, sub.top(time_filter="year", limit=5)))
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.top(time_filter="all", limit=50)))
+    futures.append(executor.submit(scrape_posts, sub.top(time_filter="all", limit=5)))
     
     # Collect a list of authors to scrape
     authors = set()
@@ -176,7 +160,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
     # Scrape author feeds
     for author_name in authors:
         thread_count += 1
-        futures.append(executor.submit(scrape_author_posts, author_name, seen_ids))
+        futures.append(executor.submit(scrape_author_posts, author_name))
         
     print(f"{thread_count} threads running")
     
@@ -188,6 +172,8 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
     for future in sorted(concurrent.futures.as_completed(futures), key=task_priority):
         thread_count -= 1
         print(f"{thread_count} threads running")
+
+print(subreddit_frequency)
 
 file_name = "data.json"
 df = pd.DataFrame(dict).drop_duplicates(subset="ID", keep="first")
