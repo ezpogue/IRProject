@@ -124,7 +124,7 @@ def scrape(post):
     dict["Comments"] = com_dict      
     dict["Text URL"] = extract_text_url(post.selftext)
     
-    print("finished parsing " + post.title)
+    print("finished parsing " + post.id + " from " + post.subreddit.display_name)
     
     payload.append(dict)
     if len(payload) >= 5:
