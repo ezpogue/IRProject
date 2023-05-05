@@ -1,17 +1,23 @@
 import praw
-import pandas as pd
 from urllib.parse import urlparse, parse_qs
 import re
 import requests
 from bs4 import BeautifulSoup
 import concurrent.futures
+import json
+import os
 
 futures = []
 
 reddit = praw.Reddit("IRProject")
 reddit.read_only = True
 
-dict = {"Title": [], "Author": [], "Subreddit": [], "Body": [], "ID": [], "Score": [], "Ratio": [], "URL": [], "Permalink": [], "Number of comments": [], "Comments": [], "Text URL": []}
+payload = []
+cwd = os.getcwd()
+chunk = 0
+file_name = "data"
+file_ext = ".json"
+
 subreddit_frequency = {}
 scrape_subreddit = []
 
@@ -57,8 +63,6 @@ def extract_text_url(self_text):
 
 def update_frequency(subreddit):
     global subreddit_frequency
-    global futures
-    global thread_count
     if subreddit in subreddit_frequency:
         subreddit_frequency[subreddit] += 1
     else:
@@ -81,37 +85,50 @@ def get_comments(c):
     return com
         
 def scrape_posts(posts):
-    global dict
-    global seen_ids
     for post in posts:
-        if post.id in seen_ids or post.id in dict["ID"]:
+        if post.id in seen_ids:
             continue
         scrape(post)
 def scrape(post):
-    global dict
+    global payload
+    global chunk
+    global seen_ids
+    
+    dict = {}
     seen_ids.add(post.id)
-    dict["Title"].append(post.title)
-    dict["Author"].append(post.author.name)
-    dict["Subreddit"].append(post.subreddit.display_name)
-    dict["Body"].append(post.selftext)
-    dict["ID"].append(post.id)
-    dict["Score"].append(post.score)
-    dict["Ratio"].append(post.upvote_ratio)
-    dict["URL"].append(post.url)
-    dict["Permalink"].append(post.permalink)
-    dict["Number of comments"].append(post.num_comments)
+    dict["Title"] = post.title
+    dict["Author"] = post.author.name
+    dict["Subreddit"] = post.subreddit.display_name
+    dict["Body"] = post.selftext
+    dict["ID"] = post.id
+    dict["Score"] = post.score
+    dict["Ratio"] = post.upvote_ratio
+    dict["URL"] = post.url
+    dict["Permalink"] = post.permalink
+    dict["Number of comments"] = post.num_comments
+    
     submission = reddit.submission(post.id)
-    
-    
     submission.comment_sort = "best"
     submission.comments.replace_more(limit=5)
     com_dict = {}
-    for comment in submission.comments.list():
+    for comment in submission.comments.list()[0:500]:
         if comment is None:
             continue
         com_dict[comment.id] = get_comments(comment)
-    dict["Comments"].append(com_dict)      
-    dict["Text URL"].append(extract_text_url(post.selftext))
+    dict["Comments"] = com_dict      
+    dict["Text URL"] = extract_text_url(post.selftext)
+    
+    print("finished parsing " + post.title)
+    
+    payload.append(dict)
+    if len(payload) >= 5:
+        path = os.path.join(cwd,"data",file_name + str(chunk) + file_ext)
+        with open(path,'w') as file:
+            json.dump(payload,file)
+        chunk += 1
+        payload.clear()
+        print("5 Submissions have been recorded")
+        
 
 def scrape_author_posts(author_name):
     author = reddit.redditor(author_name)
@@ -128,8 +145,7 @@ sub = reddit.subreddit("HobbyDrama")
 scrape_subreddit.append("HobbyDrama")
 
 ##Small Test Case
-#scrape_posts(sub.top(time_filter="all",limit=5))
-
+scrape_posts(sub.top(time_filter="all",limit=1000))
 
 def task_priority(future):
     #Calculate the priority of a task based on its execution time
@@ -140,21 +156,22 @@ def task_priority(future):
     else:
         return 0
 
+'''
 with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.new(limit=5)))
+    futures.append(executor.submit(scrape_posts, sub.new(limit=2)))
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.hot(limit=5)))
+    futures.append(executor.submit(scrape_posts, sub.hot(limit=2)))
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.top(time_filter="day", limit=5)))
+    futures.append(executor.submit(scrape_posts, sub.top(time_filter="day", limit=2)))
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.top(time_filter="week", limit=5)))
+    futures.append(executor.submit(scrape_posts, sub.top(time_filter="week", limit=2)))
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.top(time_filter="month", limit=5)))
+    futures.append(executor.submit(scrape_posts, sub.top(time_filter="month", limit=2)))
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.top(time_filter="year", limit=5)))
+    futures.append(executor.submit(scrape_posts, sub.top(time_filter="year", limit=2)))
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.top(time_filter="all", limit=5)))
+    futures.append(executor.submit(scrape_posts, sub.top(time_filter="all", limit=2)))
     
     # Collect a list of authors to scrape
     authors = set()
@@ -177,11 +194,13 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
     for future in sorted(concurrent.futures.as_completed(futures), key=task_priority):
         thread_count -= 1
         #print(f"{thread_count} threads running")
+'''
 
-print(subreddit_frequency)
 
-file_name = "data.json"
-df = pd.DataFrame(dict).drop_duplicates(subset="ID", keep="first")
-print(f"Writing data to {file_name}")
-df.to_json(file_name, orient='records', lines=True)
-print(f"Finished writing data to {file_name}")
+path = os.path.join(cwd,"data",file_name + str(chunk) + file_ext)
+chunk += 1
+with open(path,'w') as file:
+    json.dump(payload,file)
+payload.clear()
+print("Remainder Data saved")
+
