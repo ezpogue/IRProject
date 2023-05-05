@@ -58,7 +58,7 @@ def extract_text_url(self_text):
 def update_frequency(subreddit):
     global subreddit_frequency
     global futures
-    global thread
+    global thread_count
     if subreddit in subreddit_frequency:
         subreddit_frequency[subreddit] += 1
     else:
@@ -103,6 +103,7 @@ def scrape_posts(posts):
             continue
         scrape(post)
 def scrape(post):
+    global dict
     seen_ids.add(post.id)
     dict["Title"].append(post.title)
     dict["Author"].append(post.author.name)
