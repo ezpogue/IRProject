@@ -13,6 +13,7 @@ url_pattern = re.compile(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%
 def extract_link_title(url):
     try:
         response = requests.get(url)
+        html = response.read().decode(encoding="utf-8")
         soup = BeautifulSoup(response.content,'html.parser')
         title = soup.title.string
     except:
@@ -73,13 +74,16 @@ def scrape_posts(posts, file_name, seen_ids):
         submission = reddit.submission(post.id)
         submission.comment_sort = "best"
 
-        submission.comments.replace_more(limit=5)
+        submission.comments.replace_more(limit=100)
         
         com_dict = {}
         for comment in submission.comments.list():
             if comment is None:
                 continue
-            com_dict[comment.id] = get_comments(comment)
+            try:
+                com_dict[comment.id] = get_comments(comment)
+            except AttributeError:
+                continue
         dict["Comments"].append(com_dict)      
         dict["Text URL"].append(extract_text_url(post.selftext))
 
@@ -93,7 +97,7 @@ def scrape_author_posts(author_name, seen_ids):
     author = reddit.redditor(author_name)
     author_upvotes = [submission.score for submission in author.submissions.new()]
     if len(author_upvotes) > 0 and sum(author_upvotes) / len(author_upvotes) >= 100:
-        author_posts = [submission for submission in author.submissions.new()]
+        author_posts = [submission for submission in author.submissions.new(limit=100)]
         file_name = f"{author_name}.json"
         scrape_posts(author_posts, file_name, seen_ids)
         print(f"Saved data for {author_name} to {file_name}")
@@ -111,25 +115,30 @@ sub = reddit.subreddit("HobbyDrama")
 
 def task_priority(future):
     #Calculate the priority of a task based on its execution time
-    return 1 / future.result()
+    #return 1 / future.result()
+    result = future.result()
+    if result is not None:
+        return 1 / result
+    else:
+        return 0
 
 
 with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
     futures = []
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.new(limit=50), "new_posts.json", seen_ids))
+    futures.append(executor.submit(scrape_posts, sub.new(limit=500), "new_posts.json", seen_ids))
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.hot(limit=50), "hot_posts.json", seen_ids))
+    futures.append(executor.submit(scrape_posts, sub.hot(limit=100), "hot_posts.json", seen_ids))
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.top(time_filter="day", limit=100), "top_posts_day.json", seen_ids))
+    futures.append(executor.submit(scrape_posts, sub.top(time_filter="day", limit=500), "top_posts_day.json", seen_ids))
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.top(time_filter="week", limit=100), "top_posts_week.json", seen_ids))
+    futures.append(executor.submit(scrape_posts, sub.top(time_filter="week", limit=500), "top_posts_week.json", seen_ids))
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.top(time_filter="month", limit=100), "top_posts_month.json", seen_ids))
+    futures.append(executor.submit(scrape_posts, sub.top(time_filter="month", limit=500), "top_posts_month.json", seen_ids))
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.top(time_filter="year", limit=50), "top_posts_year.json", seen_ids))
+    futures.append(executor.submit(scrape_posts, sub.top(time_filter="year", limit=500), "top_posts_year.json", seen_ids))
     thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.top(time_filter="all", limit=50), "top_posts_all.json", seen_ids))
+    futures.append(executor.submit(scrape_posts, sub.top(time_filter="all", limit=100), "top_posts_all.json", seen_ids))
     
     # Collect a list of authors to scrape
     authors = set()
@@ -151,5 +160,4 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
 
     for future in sorted(concurrent.futures.as_completed(futures), key=task_priority):
         thread_count -= 1
-        print(f"{thread_count} threads running")
-
+        #print(f"{thread_count} threads running")
