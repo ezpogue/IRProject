@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import concurrent.futures
 import json
 import os
+import queue
 
 futures = []
 
@@ -20,6 +21,7 @@ file_ext = ".json"
 
 subreddit_frequency = {}
 scrape_subreddit = []
+scrape_queue = queue.Queue()
 
 seen_ids = set()
 
@@ -43,15 +45,15 @@ def extract_text_url(self_text):
     url_list = []
     urls.extend(url_pattern.findall(self_text))
     for u in urls:
-        if re.search(r'reddit', u):
-            if re.match(subreddit_pattern, u):
-                update_frequency(reddit.subreddit(u.split('/r/')[1].split('/')[0]))
-            if re.match(post_pattern, u):
-                sub = reddit.submission(url=u)
-                scrape(sub)
-                update_frequency(sub.subreddit.display_name)
-            if re.match(comment_pattern,u):
-                update_frequency(reddit.comment(url=u).subreddit.display_name)
+        if re.match(subreddit_pattern, u):
+            update_frequency(reddit.subreddit(u.split('/r/')[1].split('/')[0]))
+        if re.match(post_pattern, u):
+            sub = reddit.submission(url=u)
+            print("link to new post occured")
+            scrape(sub)
+            update_frequency(sub.subreddit.display_name)
+        if re.match(comment_pattern,u):
+            update_frequency(reddit.comment(url=u).subreddit.display_name)
         parsed_url = urlparse(u)
         query = parse_qs(parsed_url.query)
         if "title" in query:
@@ -67,9 +69,10 @@ def update_frequency(subreddit):
         subreddit_frequency[subreddit] += 1
     else:
         subreddit_frequency[subreddit] = 1
-    if (not subreddit in scrape_subreddit and len(scrape_subreddit) <= 15 and subreddit_frequency[subreddit] >= 50):
-        scrape_subreddit.append(subreddit)
-        
+    if (not subreddit in scrape_subreddit and len(scrape_subreddit) <= 100 and subreddit_frequency[subreddit] >= 1):
+        print("subreddit: " + str(subreddit) + " added to scrape queue")
+        scrape_queue.put(subreddit)
+    
 def get_comments(c):
     com = {}
     if c.author is None:
@@ -97,7 +100,10 @@ def scrape(post):
     dict = {}
     seen_ids.add(post.id)
     dict["Title"] = post.title
-    dict["Author"] = post.author.name
+    if post.author is None:
+        dict["Author"] = "Deleted"
+    else:
+        dict["Author"] = post.author.name
     dict["Subreddit"] = post.subreddit.display_name
     dict["Body"] = post.selftext
     dict["ID"] = post.id
@@ -141,11 +147,23 @@ def scrape_author_posts(author_name):
 
 
 thread_count = 0
-sub = reddit.subreddit("HobbyDrama")
-scrape_subreddit.append("HobbyDrama")
+with open('seed.json', 'r') as file:
+    seed = json.load(file)
 
-##Small Test Case
-scrape_posts(sub.top(time_filter="all",limit=1000))
+for s in seed:
+    scrape_queue.put(s)
+    
+print("Crawling " + str(scrape_queue.qsize()) + " from seed")
+##Test Case
+while(scrape_queue.qsize() > 0):
+    sub = reddit.subreddit(scrape_queue.get())
+    scrape_posts(sub.top(time_filter="all",limit=1000))
+
+
+
+
+
+'''
 
 def task_priority(future):
     #Calculate the priority of a task based on its execution time
@@ -156,7 +174,6 @@ def task_priority(future):
     else:
         return 0
 
-'''
 with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
     thread_count += 1
     futures.append(executor.submit(scrape_posts, sub.new(limit=2)))
