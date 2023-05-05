@@ -33,12 +33,6 @@ def scrape_posts(posts, file_name, seen_ids):
         dict["Number of comments"].append(post.num_comments)
         submission = reddit.submission(post.id)
         submission.comment_sort = "best"
-        submission.comments.replace_more(limit=None)
-        c = []
-        for comment in submission.comments:
-            #c.extend(get_nested_comments(comment))
-        dict["Comments"].append([comments.body for comments in c])
-        dict["Hyperlink Titles"].append(extract_hyperlink_titles(post))
 
     df = pd.DataFrame(dict).drop_duplicates(subset="ID", keep="first")
     print(f"Writing data to {file_name}")
