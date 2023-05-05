@@ -17,20 +17,6 @@ def extract_link_title(url):
         title = "No title found"
     return title
 
-def extract_hyperlink_titles(post):
-    post_text = post.selftext
-    words = post_text.split()
-    hyperlink_titles = []
-    for word in words:
-        if word.startswith("http") or word.startswith("https"):
-            parsed_url = urlparse(word)
-            query = parse_qs(parsed_url.query)
-            if "title" in query:
-                hyperlink_titles.append(query["title"][0])
-            else:
-                hyperlink_titles.append(extract_link_title(word))
-    return hyperlink_titles
-
 def scrape_posts(posts, file_name, seen_ids):
     dict = {"Title": [], "Body": [], "ID": [], "Score": [], "URL": [], "Permalink": [], "Number of comments": [], "Comments": [], "Hyperlink Titles": []}
     for post in posts:
