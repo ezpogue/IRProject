@@ -128,16 +128,20 @@ def scrape(post):
     print("finished parsing " + post.id + " from " + post.subreddit.display_name)
     payload.append(dict)
     
-    json_size = json.dumps(payload)
-    json_size_bytes = sys.getsizeof(json_size)
-    if json_size_bytes >= 1000000:
+    json_file = json.dumps(payload)
+    json_size = len(json_file.encode('utf-8'))
+    if json_size >= 10000000:
         path = os.path.join(cwd,"data",file_name + str(chunk) + file_ext)
         with open(path,'w',encoding='utf-8') as file:
-            json.dump(payload,file, ensure_ascii=False)
-            file.write('\n')
+            for post_dict in payload:
+                json.dump(post_dict, file, ensure_ascii=False)
+                file.write('\n')
         chunk += 1
         payload.clear()
         print("10 mb saved to data" + str(chunk))
+    if(chunk >= 55):
+        print("500 mb of data scraped, exiting,")
+        sys.exit()
         
 def scrape_author_posts(author_name):
     author = reddit.redditor(author_name)
@@ -164,8 +168,9 @@ while(scrape_queue.qsize() > 0):
 path = os.path.join(cwd,"data",file_name + str(chunk) + file_ext)
 chunk += 1
 with open(path,'w',encoding='utf-8') as file:
-    json.dump(payload,file, ensure_ascii=False)
-    file.write('\n')
+    for post_dict in payload:
+        json.dump(post_dict, file, ensure_ascii=False)
+        file.write('\n')
 payload.clear()
 print("Remainder Data saved")
 
