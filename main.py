@@ -7,8 +7,6 @@ import json
 import os
 import queue
 
-futures = []
-
 reddit = praw.Reddit("IRProject")
 reddit.read_only = True
 
@@ -147,8 +145,6 @@ def scrape_author_posts(author_name):
     else:
         print(f"Not scraping feed for {author_name}, average upvotes < 100")
 
-
-thread_count = 0
 with open('seed.json', 'r') as file:
     seed = json.load(file)
 
