@@ -154,6 +154,7 @@ with open('seed.json', 'r') as file:
 
 for s in seed:
     scrape_queue.put(s)
+    scrape_subreddit.append(s)
     
 print("Crawling " + str(scrape_queue.qsize()) + " from seed")
 ##Test Case
