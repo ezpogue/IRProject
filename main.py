@@ -139,7 +139,7 @@ def scrape(post):
         chunk += 1
         payload.clear()
         print("10 mb saved to data" + str(chunk))
-    if(chunk >= 55):
+    if(chunk >= 60):
         print("500 mb of data scraped, exiting,")
         sys.exit()
         
