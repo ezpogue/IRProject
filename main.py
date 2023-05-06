@@ -69,7 +69,7 @@ def update_frequency(subreddit):
         subreddit_frequency[subreddit] += 1
     else:
         subreddit_frequency[subreddit] = 1
-    if (not subreddit in scrape_subreddit and len(scrape_subreddit) <= 100 and subreddit_frequency[subreddit] >= 1):
+    if (subreddit not in scrape_subreddit and len(scrape_subreddit) <= 100 and subreddit_frequency[subreddit] >= 1):
         print("subreddit: " + str(subreddit) + " added to scrape queue")
         scrape_subreddit.append(subreddit)
         scrape_queue.put(subreddit)
