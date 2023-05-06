@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import json
 import os
 import queue
+import sys
 
 reddit = praw.Reddit("IRProject")
 reddit.read_only = True
@@ -46,8 +47,8 @@ def extract_text_url(self_text):
             update_frequency(reddit.subreddit(u.split('/r/')[1].split('/')[0]))
         if re.match(post_pattern, u):
             sub = reddit.submission(url=u)
-            print("link to new post occured, begin scraping")
             if(sub.id not in seen_ids):
+                print("link to new post occured, begin scraping")
                 scrape(sub)
                 update_frequency(sub.subreddit.display_name)
         if re.match(comment_pattern,u):
@@ -125,17 +126,19 @@ def scrape(post):
     dict["Text URL"] = extract_text_url(post.selftext)
     
     print("finished parsing " + post.id + " from " + post.subreddit.display_name)
-    
     payload.append(dict)
-    if len(payload) >= 5:
+    
+    json_size = json.dumps(payload)
+    json_size_bytes = sys.getsizeof(json_size)
+    if json_size_bytes >= 1000000:
         path = os.path.join(cwd,"data",file_name + str(chunk) + file_ext)
-        with open(path,'w') as file:
-            json.dump(payload,file)
+        with open(path,'w',encoding='utf-8') as file:
+            json.dump(payload,file, ensure_ascii=False)
+            file.write('\n')
         chunk += 1
         payload.clear()
-        print("5 Submissions have been recorded")
+        print("10 mb saved")
         
-
 def scrape_author_posts(author_name):
     author = reddit.redditor(author_name)
     author_upvotes = [submission.score for submission in author.submissions.new()]
@@ -160,8 +163,9 @@ while(scrape_queue.qsize() > 0):
 
 path = os.path.join(cwd,"data",file_name + str(chunk) + file_ext)
 chunk += 1
-with open(path,'w') as file:
-    json.dump(payload,file)
+with open(path,'w',encoding='utf-8') as file:
+    json.dump(payload,file, ensure_ascii=False)
+    file.write('\n')
 payload.clear()
 print("Remainder Data saved")
 
