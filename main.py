@@ -137,7 +137,7 @@ def scrape(post):
             file.write('\n')
         chunk += 1
         payload.clear()
-        print("10 mb saved")
+        print("10 mb saved to data" + str(chunk))
         
 def scrape_author_posts(author_name):
     author = reddit.redditor(author_name)
