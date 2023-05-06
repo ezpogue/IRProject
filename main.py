@@ -161,61 +161,6 @@ while(scrape_queue.qsize() > 0):
     sub = reddit.subreddit(scrape_queue.get())
     scrape_posts(sub.top(time_filter="all",limit=1000))
 
-
-
-
-
-'''
-
-def task_priority(future):
-    #Calculate the priority of a task based on its execution time
-    #return 1 / future.result()
-    result = future.result()
-    if result is not None:
-        return 1 / result
-    else:
-        return 0
-
-with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
-    thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.new(limit=2)))
-    thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.hot(limit=2)))
-    thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.top(time_filter="day", limit=2)))
-    thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.top(time_filter="week", limit=2)))
-    thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.top(time_filter="month", limit=2)))
-    thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.top(time_filter="year", limit=2)))
-    thread_count += 1
-    futures.append(executor.submit(scrape_posts, sub.top(time_filter="all", limit=2)))
-    
-    # Collect a list of authors to scrape
-    authors = set()
-    for post in sub.top(time_filter="year", limit=100):
-        if post.author is not None and post.author.name not in authors:
-            authors.add(post.author.name)
-    
-    # Scrape author feeds
-    for author_name in authors:
-        thread_count += 1
-        futures.append(executor.submit(scrape_author_posts, author_name))
-        
-    print(f"{thread_count} threads running")
-    
-
-    #for future in concurrent.futures.as_completed(futures):
-        #thread_count -=1
-        #print(f"{thread_count} threads running") ##checking if multi-threading works with author posts
-
-    for future in sorted(concurrent.futures.as_completed(futures), key=task_priority):
-        thread_count -= 1
-        #print(f"{thread_count} threads running")
-'''
-
-
 path = os.path.join(cwd,"data",file_name + str(chunk) + file_ext)
 chunk += 1
 with open(path,'w') as file:
