@@ -53,13 +53,16 @@ def extract_text_url(self_text):
                 update_frequency(sub.subreddit.display_name)
         if re.match(comment_pattern,u):
             update_frequency(reddit.comment(url=u).subreddit.display_name)
-        parsed_url = urlparse(u)
-        query = parse_qs(parsed_url.query)
-        if "title" in query:
-            new_pair = (query["title"][0],u)
-        else:
-            new_pair = (extract_link_title(u),u)
-        url_list.append(new_pair)        
+        try:
+            parsed_url = urlparse(u)
+            query = parse_qs(parsed_url.query)
+            if "title" in query:
+                new_pair = (query["title"][0],u)
+            else:
+                new_pair = (extract_link_title(u),u)
+            url_list.append(new_pair)
+        except:
+            print("Invalid URL")        
     return url_list
 
 def update_frequency(subreddit):
@@ -74,18 +77,21 @@ def update_frequency(subreddit):
         scrape_queue.put(subreddit)
     
 def get_comments(c):
-    com = {}
-    if c.author is None:
-        com['Author'] = "Deleted"
-    else:
-        com['Author'] = c.author.name
-    com['Parent ID'] = c.parent_id
-    com['Body'] = c.body
-    com['Text Url'] = extract_text_url(c.body)
-    com['Ups'] = c.ups
-    com['Downs'] = c.downs
-    com['Permalink'] = c.permalink
-    return com
+    try:
+        com = {}
+        if c.author is None:
+            com['Author'] = "Deleted"
+        else:
+            com['Author'] = c.author.name
+        com['Parent ID'] = c.parent_id
+        com['Body'] = c.body
+        com['Text Url'] = extract_text_url(c.body)
+        com['Ups'] = c.ups
+        com['Downs'] = c.downs
+        com['Permalink'] = c.permalink
+        return com
+    except:
+        print("Error in scraping comment")
         
 def scrape_posts(posts):
     for post in posts:
@@ -97,50 +103,53 @@ def scrape(post):
     global chunk
     global seen_ids
     
-    dict = {}
-    seen_ids.add(post.id)
-    dict["Title"] = post.title
-    if post.author is None:
-        dict["Author"] = "Deleted"
-    else:
-        dict["Author"] = post.author.name
-    
-    dict["Subreddit"] = post.subreddit.display_name
-    dict["Body"] = post.selftext
-    dict["ID"] = post.id
-    dict["Score"] = post.score
-    dict["Ratio"] = post.upvote_ratio
-    dict["URL"] = post.url
-    dict["Permalink"] = post.permalink
-    dict["Number of comments"] = post.num_comments
-    
-    submission = reddit.submission(post.id)
-    submission.comments.replace_more(limit=5)
-    com_dict = {}
-    for comment in submission.comments.list():
-        if comment is None:
-            continue
-        com_dict[comment.id] = get_comments(comment)
-    dict["Comments"] = com_dict      
-    dict["Text URL"] = extract_text_url(post.selftext)
-    
-    print("finished parsing " + post.id + " from " + post.subreddit.display_name)
-    payload.append(dict)
-    
-    json_file = json.dumps(payload)
-    json_size = len(json_file.encode('utf-8'))
-    if json_size >= 10000000:
-        path = os.path.join(cwd,"data",file_name + str(chunk) + file_ext)
-        with open(path,'w',encoding='utf-8') as file:
-            for post_dict in payload:
-                json.dump(post_dict, file, ensure_ascii=False)
-                file.write('\n')
-        payload.clear()
-        print("10 mb saved to data" + str(chunk))
-        chunk += 1
-    if(chunk >= 60):
-        print("500 mb of data scraped, exiting,")
-        sys.exit()
+    try:
+        dict = {}
+        seen_ids.add(post.id)
+        dict["Title"] = post.title
+        if post.author is None:
+            dict["Author"] = "Deleted"
+        else:
+            dict["Author"] = post.author.name
+        
+        dict["Subreddit"] = post.subreddit.display_name
+        dict["Body"] = post.selftext
+        dict["ID"] = post.id
+        dict["Score"] = post.score
+        dict["Ratio"] = post.upvote_ratio
+        dict["URL"] = post.url
+        dict["Permalink"] = post.permalink
+        dict["Number of comments"] = post.num_comments
+        
+        submission = reddit.submission(post.id)
+        submission.comments.replace_more(limit=5)
+        com_dict = {}
+        for comment in submission.comments.list():
+            if comment is None:
+                continue
+            com_dict[comment.id] = get_comments(comment)
+        dict["Comments"] = com_dict      
+        dict["Text URL"] = extract_text_url(post.selftext)
+        
+        print("finished parsing " + post.id + " from " + post.subreddit.display_name)
+        payload.append(dict)
+        
+        json_file = json.dumps(payload)
+        json_size = len(json_file.encode('utf-8'))
+        if json_size >= 10000000:
+            path = os.path.join(cwd,"data",file_name + str(chunk) + file_ext)
+            with open(path,'w',encoding='utf-8') as file:
+                for post_dict in payload:
+                    json.dump(post_dict, file, ensure_ascii=False)
+                    file.write('\n')
+            payload.clear()
+            print("10 mb saved to data" + str(chunk))
+            chunk += 1
+        if(chunk >= 60):
+            print("500 mb of data scraped, exiting,")
+            sys.exit()
+    except:
+        print("Error in scrape")
         
 def scrape_author_posts(author_name):
     author = reddit.redditor(author_name)
