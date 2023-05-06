@@ -53,13 +53,16 @@ def extract_text_url(self_text):
                 update_frequency(sub.subreddit.display_name)
         if re.match(comment_pattern,u):
             update_frequency(reddit.comment(url=u).subreddit.display_name)
-        parsed_url = urlparse(u)
-        query = parse_qs(parsed_url.query)
-        if "title" in query:
-            new_pair = (query["title"][0],u)
-        else:
-            new_pair = (extract_link_title(u),u)
-        url_list.append(new_pair)        
+        try:
+            parsed_url = urlparse(u)
+            query = parse_qs(parsed_url.query)
+            if "title" in query:
+                new_pair = (query["title"][0],u)
+            else:
+                new_pair = (extract_link_title(u),u)
+            url_list.append(new_pair)
+        except:
+            print("Invalid URL")        
     return url_list
 
 def update_frequency(subreddit):
