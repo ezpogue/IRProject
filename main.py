@@ -115,10 +115,9 @@ def scrape(post):
     dict["Number of comments"] = post.num_comments
     
     submission = reddit.submission(post.id)
-    submission.comment_sort = "best"
     submission.comments.replace_more(limit=5)
     com_dict = {}
-    for comment in submission.comments.list()[0:500]:
+    for comment in submission.comments.list():
         if comment is None:
             continue
         com_dict[comment.id] = get_comments(comment)
