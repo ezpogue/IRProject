@@ -3,7 +3,6 @@ from urllib.parse import urlparse, parse_qs
 import re
 import requests
 from bs4 import BeautifulSoup
-import concurrent.futures
 import json
 import os
 import queue
@@ -32,7 +31,7 @@ comment_pattern = re.compile(r'^https?://(www\.)?reddit\.com/r/[\w-]+/comments/[
     
 def extract_link_title(url):
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=10)
         html = response.read().decode(encoding="utf-8")
         soup = BeautifulSoup(response.content,'html.parser')
         title = soup.title.string
@@ -49,9 +48,10 @@ def extract_text_url(self_text):
             update_frequency(reddit.subreddit(u.split('/r/')[1].split('/')[0]))
         if re.match(post_pattern, u):
             sub = reddit.submission(url=u)
-            print("link to new post occured")
-            scrape(sub)
-            update_frequency(sub.subreddit.display_name)
+            print("link to new post occured, begin scraping")
+            if(sub.id not in seen_ids):
+                scrape(sub)
+                update_frequency(sub.subreddit.display_name)
         if re.match(comment_pattern,u):
             update_frequency(reddit.comment(url=u).subreddit.display_name)
         parsed_url = urlparse(u)
@@ -105,6 +105,7 @@ def scrape(post):
         dict["Author"] = "Deleted"
     else:
         dict["Author"] = post.author.name
+    
     dict["Subreddit"] = post.subreddit.display_name
     dict["Body"] = post.selftext
     dict["ID"] = post.id
