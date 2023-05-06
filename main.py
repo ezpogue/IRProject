@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import json
 import os
 import queue
+import sys
 
 reddit = praw.Reddit("IRProject")
 reddit.read_only = True
