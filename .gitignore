@@ -1,1 +1,3 @@
 *.json
+!seed.json
+praw.ini
