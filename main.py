@@ -6,7 +6,6 @@ from bs4 import BeautifulSoup
 import json
 import os
 import queue
-import sys
 
 reddit = praw.Reddit("IRProject")
 reddit.read_only = True
@@ -128,9 +127,9 @@ def scrape(post):
     print("finished parsing " + post.id + " from " + post.subreddit.display_name)
     payload.append(dict)
     
-    json_size = json.dumps(payload)
-    json_size_bytes = sys.getsizeof(json_size)
-    if json_size_bytes >= 1000000:
+    json_file = json.dumps(payload)
+    json_size = len(json_file.encode('utf-8'))
+    if json_size >= 10000000:
         path = os.path.join(cwd,"data",file_name + str(chunk) + file_ext)
         with open(path,'w',encoding='utf-8') as file:
             json.dump(payload,file, ensure_ascii=False)
