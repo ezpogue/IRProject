@@ -84,12 +84,19 @@ def get_comments(c):
             com['Author'] = "Deleted"
         else:
             com['Author'] = c.author.name
-        com['Parent ID'] = c.parent_id
-        com['Body'] = c.body
-        com['Text Url'] = extract_text_url(c.body)
-        com['Ups'] = c.ups
-        com['Downs'] = c.downs
-        com['Permalink'] = c.permalink
+            com['Parent ID'] = c.parent_id
+            com['Body'] = c.body
+            com['Text Url'] = extract_text_url(c.body)
+            com['Permalink'] = c.permalink
+            com['Upvotes'] = c.ups
+            com['Downvotes'] = c.downs
+            total_votes = c.ups + c.downs
+            if total_votes > 0:
+                upvote_ratio = c.ups / total_votes
+            else:
+                upvote_ratio = 0.0
+            com['Ratio'] = upvote_ratio
+            com['Timestamp'] = datetime.datetime.utcfromtimestamp(c.created_utc).strftime('%Y-%m-%d %H:%M:%S')
         return com
     except:
         print("Error in scraping comment")
@@ -117,10 +124,11 @@ def scrape(post):
         dict["Body"] = post.selftext
         dict["ID"] = post.id
         dict["Score"] = post.score
-        dict["Upvotes"] = post.ups
-        dict["Ratio"] = post.upvote_ratio
         dict["URL"] = post.url
         dict["Permalink"] = post.permalink
+        dict["Upvotes"] = post.ups
+        dict["Downvotes"] = post.downs
+        dict["Ratio"] = post.upvote_ratio
         dict["Number of comments"] = post.num_comments
         dict["Timestamp"] = datetime.datetime.utcfromtimestamp(post.created_utc).strftime('%Y-%m-%d %H:%M:%S')
         
